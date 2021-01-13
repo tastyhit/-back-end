@@ -17,15 +17,12 @@ router.get("/", (req, res) => {
 
 router.get("/:id", (req, res) => {
   const { id } = req.params;
-  db.getById(id)
-    .then(properties => {
-      if (properties) {
-        res.status(200).json(properties);
-      } else {
-        res
-          .status(404)
-          .json({ error: "The specified property does not exist." });
-      }
+  db.select('*')
+    .from('users')
+    .where({id})
+    .first()
+    .then(user => {
+      res.status(200).json({data:user});
     })
     .catch(err => {
       res.status(500).json({ error: `${err}` });
@@ -34,32 +31,22 @@ router.get("/:id", (req, res) => {
 
 
 
-router.get("/landlord/:id", (req, res) => {
-  const { id } = req.params;
 
-  db.getByLandlordId(id)
-    .then(properties => {
-      if (properties) {
-        res.status(200).json(properties);
-      } else {
-        res.status(404).json({ error: "no properties were found" });
-      }
-    })
-    .catch(err => {
-      res.status(500).json({ error: `${err}` });
-    });
-});
 
 
 router.post("/", (req, res, next) => {
-  const property = req.body;
-  console.log("create", property);
-  db.create(property)
-    .then(property => {
-      res.status(201).json({ property });
+  const postData = req.body;
+  db('users')
+    .insert(postData, 'id')
+    .then(ids => {
+      db('users')
+                .where({id: ids[0]})
+                .first()
+                .then(acc =>{
+                  res.status(200).json({data:acc})
+                })
     })
     .catch(err => {
-      console.log("error", err);
       res.status(500).json({ error: `${err}` });
     });
 });
@@ -67,14 +54,16 @@ router.post("/", (req, res, next) => {
 
 router.put("/:id", (req, res, next) => {
   const { id } = req.params;
-  const property = req.body;
-  console.log("edit", id, property);
-  db.editById(id, property)
-    .then(property => {
-      if (property) {
-        res.status(200).json({ message: "Property updated." });
+  const changes = req.body;
+  
+  db('users')
+    .where({id})
+    .update(changes)
+    .then(user => {
+      if (user) {
+        res.status(200).json({ message: "User updated." });
       } else {
-        res.status(404).json({ error: "No property found." });
+        res.status(404).json({ error: "No user found." });
       }
     })
     .catch(err => {
@@ -85,14 +74,17 @@ router.put("/:id", (req, res, next) => {
 
 router.delete("/:id", (req, res) => {
   const { id } = req.params;
-  db.deleteById(id)
-    .then(property => {
-      if (property) {
-        res.status(202).json({ message: "Property deleted." });
+  db('users')
+    .from('users')
+    .where({id})
+    .del()
+    .then(user => {
+      if (user) {
+        res.status(202).json({ message: "User deleted." });
       } else {
         res
           .status(404)
-          .json({ error: "The property specified does not exist." });
+          .json({ error: "The user specified does not exist." });
       }
     })
     .catch(err => {
