@@ -92,4 +92,19 @@ router.delete("/:id", (req, res) => {
     });
 });
 
+
+router.post("/login", (req,res)=>{
+  const { phone } = req.body;
+  db.select('*')
+  .from('users')
+  .where({phone})
+  .update({otp: Math.floor(Math.random()*9000) + 10000})
+  .then(user =>{
+    res.status(200).json({message: "OTP sent"})
+  })
+  .catch(err => {
+    res.status(500).json({ error: `${err}` });
+  });
+})
+
 module.exports = router;

@@ -6,7 +6,8 @@ exports.up = function(knex) {
         tbl.string('email').notNullable();
         tbl.integer('phone').notNullable();
         tbl.integer('zipcode').notNullable();
-        tbl.boolean('alive')
+        tbl.boolean('alive');
+        tbl.integer('otp')
 
     })
   
