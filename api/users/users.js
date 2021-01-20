@@ -1,8 +1,18 @@
+require('dotenv').config();
+
 const express = require("express");
-
 const db = require('../../data/dbConfig')
-
 const router = express.Router();
+
+
+const accountSid = process.env.accountSid
+const authToken = process.env.authToken
+
+const client = require('twilio')(accountSid, authToken)
+
+
+
+
 
 router.get("/", (req, res) => {
   db('users')
@@ -21,8 +31,10 @@ router.get("/:id", (req, res) => {
     .from('users')
     .where({id})
     .first()
+    
     .then(user => {
       res.status(200).json({data:user});
+      
     })
     .catch(err => {
       res.status(500).json({ error: `${err}` });
@@ -95,16 +107,31 @@ router.delete("/:id", (req, res) => {
 
 router.post("/login", (req,res)=>{
   const { phone } = req.body;
+  const otp = Math.floor(Math.random()*9000) + 10000
   db.select('*')
   .from('users')
   .where({phone})
-  .update({otp: Math.floor(Math.random()*9000) + 10000})
+  .update({otp: otp })
   .then(user =>{
+    sendSMS(phone, otp)
     res.status(200).json({message: "OTP sent"})
+    
   })
   .catch(err => {
     res.status(500).json({ error: `${err}` });
   });
 })
+
+
+const sendSMS = (phone , message) =>{
+  client.messages
+  .create({
+    body: message,  
+      messagingServiceSid: 'MGc385b47ad8878c4ca34d0e08dec60c30',      
+      to: phone 
+  })
+  .then(message => console.log(message.sid)) 
+
+}
 
 module.exports = router;
