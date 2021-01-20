@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require("express");
+const { from } = require('../../data/dbConfig');
 const db = require('../../data/dbConfig')
 const router = express.Router();
 
@@ -120,6 +121,21 @@ router.post("/login", (req,res)=>{
   .catch(err => {
     res.status(500).json({ error: `${err}` });
   });
+})
+
+router.post("/auth", (req,res)=>{
+  const phone = req.body.phone
+  const otp = req.body.otp
+  db.select('*')
+    .from('users')
+    .where({phone: phone, otp:otp})
+    .then(user =>{
+      res.status(200).json({message: 'OTP authenticate'})
+    })
+    .catch(err=>{
+      res.status(500).json({error: `${err}`})
+    })
+    
 })
 
 
