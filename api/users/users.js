@@ -1,8 +1,9 @@
 require('dotenv').config();
 
 const express = require("express");
-const { from } = require('../../data/dbConfig');
-const db = require('../../data/dbConfig')
+
+
+const db = require('../users/helper_users')
 const router = express.Router();
 
 
@@ -14,9 +15,8 @@ const client = require('twilio')(accountSid, authToken)
 
 
 
-
 router.get("/", (req, res) => {
-  db('users')
+  db.get()
     .then(users =>{
       res.json(users);
     })
@@ -26,15 +26,16 @@ router.get("/", (req, res) => {
 });
 
 
+
 router.get("/:id", (req, res) => {
   const { id } = req.params;
-  db.select('*')
-    .from('users')
-    .where({id})
-    .first()
-    
+  db.getById(id)
     .then(user => {
-      res.status(200).json({data:user});
+      if (user){
+        res.status(200).json(user);
+      } else {
+        res.status(400).json({error: 'User not found'});
+      }
       
     })
     .catch(err => {
@@ -43,21 +44,45 @@ router.get("/:id", (req, res) => {
 });
 
 
-
+router.get('/search', (req,res)=>{
+  const  data  = req.body;
+  if('phone' in data){
+    db.getByPhone(Object.values(data))
+      .then(user=>{
+        if (user){
+          res.status(200).json(user);
+        } else {
+          res.status(400).json({error: 'User not found'});
+        }
+      })
+      .catch(err=>{
+        res.status(500).json({error: `${err}`})
+      })
+  }else{
+    db.getByEmail(Object.values(data))
+      .then(user=>{
+        if (user){
+          res.status(200).json(user);
+        } else {
+          res.status(400).json({error: 'User not found'});
+        }
+      })
+      .catch(err=>{
+        res.status(500).json({error: `${err}`})
+      })
+  }
+})
 
 
 
 router.post("/", (req, res, next) => {
-  const postData = req.body;
-  db('users')
-    .insert(postData, 'id')
+  const user = req.body;
+  db.create(user)
     .then(ids => {
-      db('users')
-                .where({id: ids[0]})
-                .first()
-                .then(acc =>{
-                  res.status(200).json({data:acc})
-                })
+      db.getById(ids[0])
+        .then(acc =>{
+            res.status(200).json(acc.id)
+          })
     })
     .catch(err => {
       res.status(500).json({ error: `${err}` });
@@ -69,9 +94,7 @@ router.put("/:id", (req, res, next) => {
   const { id } = req.params;
   const changes = req.body;
   
-  db('users')
-    .where({id})
-    .update(changes)
+  db.editById(id, changes)
     .then(user => {
       if (user) {
         res.status(200).json({ message: "User updated." });
@@ -87,17 +110,12 @@ router.put("/:id", (req, res, next) => {
 
 router.delete("/:id", (req, res) => {
   const { id } = req.params;
-  db('users')
-    .from('users')
-    .where({id})
-    .del()
+  db.deleteById(id)
     .then(user => {
       if (user) {
         res.status(202).json({ message: "User deleted." });
       } else {
-        res
-          .status(404)
-          .json({ error: "The user specified does not exist." });
+        res.status(404).json({ error: "The user specified does not exist." });
       }
     })
     .catch(err => {
@@ -109,9 +127,7 @@ router.delete("/:id", (req, res) => {
 router.post("/login", (req,res)=>{
   const { phone } = req.body;
   const otp = Math.floor(Math.random()*9000) + 10000
-  db.select('*')
-  .from('users')
-  .where({phone})
+  db.getByNumber(phone)
   .update({otp: otp })
   .then(user =>{
     sendSMS(phone, otp)
@@ -126,9 +142,7 @@ router.post("/login", (req,res)=>{
 router.post("/auth", (req,res)=>{
   const phone = req.body.phone
   const otp = req.body.otp
-  db.select('*')
-    .from('users')
-    .where({phone: phone, otp:otp})
+  db.getByOTP(phone, otp)
     .then(user =>{
       res.status(200).json({message: 'OTP authenticate'})
     })
@@ -137,6 +151,7 @@ router.post("/auth", (req,res)=>{
     })
     
 })
+
 
 
 const sendSMS = (phone , message) =>{
