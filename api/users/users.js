@@ -1,7 +1,7 @@
 require('dotenv').config();
 
 const express = require("express");
-
+const jwt = require('jsonwebtoken')
 
 const db = require('../users/helper_users')
 const router = express.Router();
@@ -19,24 +19,6 @@ router.get("/", (req, res) => {
   db.get()
     .then(users =>{
       res.json(users);
-    })
-    .catch(err => {
-      res.status(500).json({ error: `${err}` });
-    });
-});
-
-
-
-router.get("/:id", (req, res) => {
-  const { id } = req.params;
-  db.getById(id)
-    .then(user => {
-      if (user){
-        res.status(200).json(user);
-      } else {
-        res.status(400).json({error: 'User not found'});
-      }
-      
     })
     .catch(err => {
       res.status(500).json({ error: `${err}` });
@@ -74,6 +56,32 @@ router.get('/search', (req,res)=>{
 })
 
 
+router.get("/otp", (req,res)=>{
+  const phone = req.body.phone
+  db.getByPhone(phone)
+    .then(user=>{
+      res.status(200).json(user.otp)
+    })
+    .catch(err=>{
+      res.status(500).json({error: `${err}`})
+    })
+})
+
+router.get("/:id", (req, res) => {
+  const { id } = req.params;
+  db.getById(id)
+    .then(user => {
+      if (user){
+        res.status(200).json(user);
+      } else {
+        res.status(400).json({error: 'User not found'});
+      }
+      
+    })
+    .catch(err => {
+      res.status(500).json({ error: `${err}` });
+    });
+});
 
 router.post("/", (req, res, next) => {
   const user = req.body;
@@ -127,10 +135,11 @@ router.delete("/:id", (req, res) => {
 router.post("/login", (req,res)=>{
   const { phone } = req.body;
   const otp = Math.floor(Math.random()*9000) + 10000
-  db.getByNumber(phone)
+  db.getByPhone(phone)
   .update({otp: otp })
   .then(user =>{
     sendSMS(phone, otp)
+    
     res.status(200).json({message: "OTP sent"})
     
   })
@@ -144,15 +153,16 @@ router.post("/auth", (req,res)=>{
   const otp = req.body.otp
   db.getByOTP(phone, otp)
     .then(user =>{
-      res.status(200).json({message: 'OTP authenticate'})
+      const token = jwt.sign({
+        userID: user.id
+      }, 'kept it')
+      res.status(200).json({message: 'OTP authenticate',token: token})
     })
     .catch(err=>{
       res.status(500).json({error: `${err}`})
     })
     
 })
-
-
 
 const sendSMS = (phone , message) =>{
   client.messages
