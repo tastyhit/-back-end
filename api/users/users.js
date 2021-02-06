@@ -155,7 +155,7 @@ router.post("/auth", (req,res)=>{
     .then(user =>{
       const token = jwt.sign({
         userID: user.id
-      }, 'kept it')
+      }, process.env.secert)
       res.status(200).json({message: 'OTP authenticate',token: token})
     })
     .catch(err=>{
