@@ -2,7 +2,7 @@ require('dotenv').config();
 
 const express = require("express");
 const jwt = require('jsonwebtoken')
-
+const {restrict} = require('./users_mw')
 const db = require('../users/helper_users')
 const router = express.Router();
 
@@ -15,7 +15,7 @@ const client = require('twilio')(accountSid, authToken)
 
 
 
-router.get("/", (req, res) => {
+router.get("/", restrict(), (req, res) => {
   db.get()
     .then(users =>{
       res.json(users);
@@ -153,8 +153,9 @@ router.post("/auth", (req,res)=>{
   const otp = req.body.otp
   db.getByOTP(phone, otp)
     .then(user =>{
+      console.log(user)
       const token = jwt.sign({
-        userID: user.id
+        userID: user.id, userType: user.type
       }, process.env.secert)
       res.status(200).json({message: 'OTP authenticate',token: token})
     })
